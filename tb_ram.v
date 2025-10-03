@@ -32,7 +32,6 @@ module tb_ram8x64k;
         addr = 0;
         din = 0;
         @(posedge clk);
-        @(posedge clk);
 
         we = 1;
         for (row = 0; row < MATRIX_SIZE; row = row + 1) begin
@@ -125,7 +124,7 @@ module tb_ram8x64k;
         end
 
         `ifdef DEBUG
-            $write("\nRAM Contents:");
+            $write("\nRAM Contents\n");
             we = 0;
             @(posedge clk);
             for (row = 0; row < MATRIX_SIZE; row = row + 1) begin
@@ -135,15 +134,15 @@ module tb_ram8x64k;
                     @(posedge clk);
                     $write("%3d ", dout);
                 end
-                $write("");
+                $write("\n");
             end
             
-            $write("\nPrinting goldenRam:");
+            $write("\nPrinting goldenRam\n");
             for (row = 0; row < MATRIX_SIZE; row = row + 1) begin
                 for (col = 0; col < MATRIX_SIZE; col = col + 1) begin
                     $write("%3d ", goldenRam[row][col]);
                 end
-                $write("");
+                $write("\n");
             end
         `endif
         $finish;
