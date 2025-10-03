@@ -1,108 +1,168 @@
-# RAM8x64K and Testbench
+# RAM8x64K Verilog — README
 
-## RAM Module
-The `ram8x64k` module is a synchronous RAM with an 8-bit data width and 64K (2^16 = 65536) address space.
+A small Verilog project implementing a synchronous **8-bit × 64K (65,536 addresses)** RAM (`ram8x64k`) and a self-checking testbench (`tb_ram8x64k`). The testbench writes a small 16×16 pattern, checks boundary and random addresses, compares memory against the golden matrix and optionally dumps a waveform and debug prints.
 
-### Interface
-- `clk`: Input clock (positive edge-triggered).
-- `we`: Write enable (1 = write, 0 = read).
-- `addr`: 16-bit address (0 to 65535).
-- `din`: 8-bit input data for writes.
-- `dout`: 8-bit output data for reads (registered).
+---
 
-### Behavior
-- On `posedge clk`:
-  - If `we = 1`, writes `din` to `mem[addr]`.
-  - If `we = 0`, outputs `mem[addr]` to `dout`.
-- Memory (`mem`) is uninitialized (`x`) at startup.
-- Uses non-blocking assignments for synchronous operation.
+## Files
 
-### Implementation
-Testbench
-The testbench (tb_ram8x64k.v) verifies the RAM module with:
+* `ram8x64k.v` — RAM module (synchronous write & synchronous read).
+* `tb_ram8x64k.v` — Testbench (MATRIX_SIZE = 16 by default). Writes/reads, self-checks, produces messages, and creates a VCD waveform.
+* `ramWave.vcd` — Waveform output (created when the sim runs).
+* `README.md` — this file.
 
-Clock: 100MHz (10ns period).
-Write Phase: Writes 8'd0 (even rows) or 8'd1 (odd rows) to addresses 0–255 (16x16 matrix).
-Additional Address Tests: Tests addresses 0, 1, 32768, and 65535 with values 9, 27, 196, and 255.
-Back-to-Back Access: Tests rapid writes and reads to the same addresses.
-Write-Read Interference: Writes 8'hAA to addr = 1000 and checks addr = 1001.
-Comparison Phase: Compares RAM contents (0–255) with a golden model (goldenRam).
-Waveform Dumping: Generates wave.vcd for debugging.
+> Note: the code you provided uses `reg [7:0] mem [0:65535];` so the memory size is 64 KB and addresses are 16 bits.
 
-Parameters
+---
 
-MATRIX_SIZE = 16: Defines the 16x16 matrix for write and comparison phases.
+## Behavior summary / timing
 
-Requirements
+* **Address width:** 16 bits → 0..65535
+* **Data width:** 8 bits
+* **Write behavior:** synchronous — on `posedge clk`, if `we` is `1`, `mem[addr] <= din`.
+* **Read behavior:** synchronous — on `posedge clk`, if `we` is `0`, `dout <= mem[addr]`.
+  (So both read and write update output/memory only on rising clock edges.)
 
-Simulator: Icarus Verilog, ModelSim, or Vivado Simulator.
-Files: ram8x64k.v, tb_ram8x64k.v.
+---
 
-How to Run
+## How to build & run
 
-Compile:
+Below are simple commands for **Icarus Verilog** (`iverilog` + `vvp`) — recommended for quick simulation.
 
-Icarus Verilog:iverilog -o tb_ram tb_ram8x64k.v ram8x64k.v
+### 1) Compile
 
+From the project directory:
 
-ModelSim:vlog tb_ram8x64k.v ram8x64k.v
+```bash
+# using Verilog-2001 / SystemVerilog features just in case, but -g2012 is safe
+iverilog -o sim_ram8x64k tb_ram8x64k.v ram8x64k.v
+```
 
+To enable `DEBUG` prints that are guarded by `` `ifdef DEBUG `` you can either:
 
+* Uncomment the ``//`define DEBUG`` line at the top of the testbench, or
+* Pass a macro define at compile:
 
+```bash
+iverilog -o sim_ram8x64k tb_ram8x64k.v ram8x64k.v
+```
 
-Run:
+### 2) Run simulation
 
-Icarus Verilog:vvp tb_ram
+```bash
+vvp sim_ram8x64k
+```
 
+This will run the testbench, print test pass/fail messages to the console, and create `ramWave.vcd` (waveform).
 
-ModelSim:vsim -c tb_ram8x64k
-run -all
-quit -sim
+### 3) View waveform (optional)
 
+Open the generated VCD in GTKWave:
 
+```bash
+gtkwave ramWave.vcd
+```
 
+The testbench calls:
 
-Debug Mode:
+```verilog
+$dumpfile("ramWave.vcd");
+$dumpvars(0, tb_ram8x64k, ram.mem[0], ram.mem[1], ram.mem[32768], ram.mem[65535]);
+```
 
-Uncomment `define DEBUG in tb_ram8x64k.v to print RAM and goldenRam contents.
-Recompile and run.
+so the top-level testbench signals and several memory entries are dumped.
 
+---
 
-View Waveform:
+## Expected console output
 
-The testbench includes:initial begin
-    $dumpfile("ramWave.vcd");
-    $dumpvars(0, tb_ram8x64k, ram);
-end
+When everything passes, you should see something similar to:
 
-
-Open in GTKWave:gtkwave ramWave.vcd
-
-
-
-
-
-Expected Output
-For a correct RAM module:
-Starting Write Phase 1
-Testing Additional Addresses: 4/4 tests passed
-Testing Back-to-Back Access: 4/4 tests passed
-Testing Write-Read Interference: Passed
+```
+Testing Boundary Addresses: Passed
+Testing Random Addresses: Passed
 Comparison Phase: Passed
+```
 
-With debug mode, it prints RAM and goldenRam contents. Errors show as:
+If a check fails you'll see messages such as:
+
+```
 Failed
-Error at addr X: expected Y, got Z
+Error at addr 65535: expected 255, got 0
+```
 
-Debugging
+or
 
-Uninitialized Memory: mem starts as x. The write phase initializes 0–255, but 32768 and 65535 may show x if not written.
-Timing: dout reflects mem[addr] from the previous clock cycle. The testbench uses delays (#1; @(posedge clk);) to handle this.
-Waveform:
-Check clk, we, addr, din, dout, ram.mem[0], ram.mem[1], ram.mem[32768], ram.mem[65535] in GTKWave.
-Verify writes to 0, 1, 32768, 65535 and dout values in test phases.
+```
+Failed
+Error at addr 512 (row 2, col 0): expected 1, got 0
+```
 
+> The testbench reads original values at addresses `65535` and `32768` before changing them, then restores them. Because `mem` is not explicitly initialized, simulation tools may show `x` for uninitialized memory. The testbench reads and preserves whatever value was there.
 
+---
 
-License
-MIT License.
+## What the testbench does (step-by-step)
+
+1. Generates a clock (`always #5 clk = ~clk;`) → 10 ns period.
+2. Fills a `MATRIX_SIZE × MATRIX_SIZE` area (default 16×16) with the pattern: rows with odd index → `1`, rows with even index → `0`.
+3. Tests the boundary address `65535` — writes `255` and verifies. Restores previous value.
+4. Tests an arbitrary mid address, `32768` — writes `128` and verifies. Restores previous value.
+5. Compares all written `MATRIX_SIZE × MATRIX_SIZE` locations against `goldenRam`.
+6. If `` `define DEBUG`` is active (or `-DDEBUG` at compile), prints RAM contents and `goldenRam` to console.
+7. Dumps VCD and finishes.
+
+---
+
+## How to change behavior
+
+* **Matrix size:** edit the `parameter MATRIX_SIZE = 16;` in `tb_ram8x64k.v`. Keep it small for quick sims; larger sizes increase runtime.
+* **Change addresses tested:** modify `addr = 65535;` and `addr = 32768;` in the testbench.
+* **Enable verbose debug prints:** uncomment ``//`define DEBUG`` or compile with `-DDEBUG`.
+
+---
+
+## Notes, tips & troubleshooting
+
+* If the simulator prints `x` values: memory is uninitialized by default. The testbench preserves/read original values for the two non-pattern addresses to avoid losing whatever was there. For deterministic sims, initialize memory before use (e.g., add an initialization loop or `$readmemh` if desired).
+* If `ramWave.vcd` is not produced, ensure the testbench reaches the `$dumpfile/$dumpvars` lines (they are in the initial block in your TB). Also ensure your simulator supports VCD (Icarus does).
+* For ModelSim/Questa use `vlog` and `vsim` similarly; for other tools adapt compile/run commands accordingly.
+* If you use Verilator regularly and want a C++ harness, you can convert the testbench into a C++ test harness that toggles signals and use Verilator to build; this is more advanced (not required to run the provided `.v` TB).
+
+---
+
+## Short example (copy/paste)
+
+```bash
+# compile
+iverilog -o sim_ram8x64k tb_ram8x64k.v ram8x64k.v
+
+# run
+vvp sim_ram8x64k
+
+# view waveform
+gtkwave ramWave.vcd
+```
+
+With DEBUG:
+
+```bash
+iverilog -g2012 -DDEBUG -o simv tb_ram8x64k.v ram8x64k.v
+vvp simv
+```
+
+---
+
+## License
+
+Add a license of your choice (MIT, Apache-2.0, etc.) if you plan to share the repo publicly.
+
+---
+
+If you want, I can:
+
+* produce a `Makefile` to automate compile/run/waveview steps, or
+* add a small script to auto-run GTKWave on success, or
+* convert the testbench to initialize memory via `$readmemh` for deterministic tests.
+
+Which (if any) would you like me to add now?
