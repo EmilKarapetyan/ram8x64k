@@ -67,7 +67,7 @@ The testbench calls:
 
 ```verilog
 $dumpfile("ramWave.vcd");
-$dumpvars(0, tb_ram8x64k, ram.mem[0], ram.mem[1], ram.mem[32768], ram.mem[65535]);
+$dumpvars(0, tb_ram8x64k, ram);
 ```
 
 so the top-level testbench signals and several memory entries are dumped.
