@@ -26,6 +26,10 @@ module tb_ram8x64k;
     reg [7:0] original_value_32768;
     reg [7:0] goldenRam [0:MATRIX_SIZE-1][0:MATRIX_SIZE-1];
 
+    initial begin
+        $dumpfile("ramWave.vcd");
+        $dumpvars(0, tb_ram8x64k, ram.mem[0], ram.mem[1], ram.mem[32768], ram.mem[65535]);
+    end
 
     initial begin
         we = 0;
