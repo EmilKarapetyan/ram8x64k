@@ -147,22 +147,12 @@ gtkwave ramWave.vcd
 With DEBUG:
 
 ```bash
-iverilog -g2012 -DDEBUG -o simv tb_ram8x64k.v ram8x64k.v
-vvp simv
+iverilog -g2012 -DDEBUG -o sim_ram8x64k tb_ram8x64k.v ram8x64k.v
+vvp sim_ram8x64k
 ```
 
 ---
 
 ## License
 
-Add a license of your choice (MIT, Apache-2.0, etc.) if you plan to share the repo publicly.
-
----
-
-If you want, I can:
-
-* produce a `Makefile` to automate compile/run/waveview steps, or
-* add a small script to auto-run GTKWave on success, or
-* convert the testbench to initialize memory via `$readmemh` for deterministic tests.
-
-Which (if any) would you like me to add now?
+MIT
