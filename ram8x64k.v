@@ -16,5 +16,4 @@ module ram8x64k (
             dout <= mem[addr];
         end
     end
-
 endmodule
